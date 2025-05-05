@@ -29,7 +29,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",  # ✅ Localhost for browser requests
     "10.0.2.2",    # ✅ Android Emulator requests
     "localhost",   # ✅ Sometimes needed
-    "https://tamang-kape-01.onrender.com"
+    "tamang-kape-01.onrender.com"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
