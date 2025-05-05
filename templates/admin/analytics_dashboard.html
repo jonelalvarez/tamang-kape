@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics Dashboard</title>
+</head>
+<body>
+    <h1>Analytics Dashboard</h1>
+    
+    <h2>Total Entries: {{ total_entries }}</h2>
+    <h2>Total Caffeine Consumed: {{ total_caffeine_consumed }} mg</h2>
+    <h2>Average Caffeine Per Entry: {{ average_caffeine_per_entry }} mg</h2>
+    
+    <h3>User-Based Caffeine Data</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Total Caffeine</th>
+                <th>Average Caffeine</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in user_caffeine_data %}
+            <tr>
+                <td>{{ data.user__username }}</td>
+                <td>{{ data.total_caffeine }} mg</td>
+                <td>{{ data.avg_caffeine }} mg</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

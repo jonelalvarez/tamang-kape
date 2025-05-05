@@ -23,6 +23,9 @@ from .serializers import (
     HealthTipSerializer, CaffeineProductSerializer, UserSerializer
 )
 
+
+def str_to_bool(value):
+    return str(value).lower() == 'true'
 class HealthTipViewSet(viewsets.ModelViewSet):
     queryset = HealthTip.objects.all()
     serializer_class = HealthTipSerializer
@@ -215,35 +218,87 @@ def add_user(request):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@csrf_exempt
 def get_users(request):
-    try:
-        users = User.objects.all()  # Fetch all users from the User model
-        data = [{"id": user.id, "username": user.username, "first_name": user.first_name, "last_name": user.last_name} for user in users]
-        return JsonResponse(data, safe=False)  # Return a JsonResponse with the user data
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)     
-    
-# ✅ Fetch all users
+    if request.method == "GET":
+        users = User.objects.all().values(
+    'id',
+    'username',
+    'userprofile__weight',  # here
+    'userprofile__bDate',     # example if you have age too
+    # etc.
+                print(f"Incoming update request for dito lumabas")
+
+)
+        return JsonResponse(list(users), safe=False)
+
 @api_view(['GET'])
 def get_user(request, user_id):
     try:
+        # Fetch the user and profile
         user = User.objects.get(id=user_id)
+        profile = UserProfile.objects.get(user=user)
+
         return Response(
             {
                 "id": user.id,
                 "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
                 "is_staff": user.is_staff,
                 "is_active": user.is_active,
                 "date_joined": user.date_joined,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+
+                # Include profile fields
+                "weight": profile.weight,
+                "bDate": profile.bDate.isoformat() if profile.bDate else None,
+                "health_condition": profile.health_condition,
             },
             status=status.HTTP_200_OK,
         )
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except UserProfile.DoesNotExist:
+        return Response({"error": "UserProfile not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+#kay jonel tong get_user
+
+def get_users(request):
+    try:
+        users = User.objects.all()
+        data = []
+        for user in users:
+            try:
+                profile = user.userprofile  # If you defined OneToOneField(User, on_delete=..., related_name='userprofile')
+                profile_data = {
+                    "weight": profile.weight,
+                    "bDate": profile.bDate,
+                    "health_condition": profile.health_condition,
+                }
+            except UserProfile.DoesNotExist:
+                profile_data = {
+                    "weight": None,
+                    "bDate": None,
+                    "health_condition": None,
+                }
+
+            data.append({
+                "id": user.id,
+                "username": user.username,
+                    "email": user.email,  # ✅ ADD THIS LINE
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "userprofile": profile_data
+                
+            })
+        print(f"Incoming update request for dito lumabaaaas")
+        return JsonResponse(data, safe=False)
+        
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 # ✅ Edit an existing user
 @api_view(['PUT'])
@@ -354,45 +409,74 @@ def edit_user(request, user_id):
 
     
     
-@csrf_exempt  # Optional: Exempt CSRF protection for testing; remove for production
+@csrf_exempt
 def update_user_profile(request, user_id):
-    if request.method in ['POST', 'PUT', 'PATCH']:  # Handle POST, PUT, and PATCH methods
+    if request.method in ['POST', 'PUT', 'PATCH']:
         try:
-            user = User.objects.get(id=user_id)
+            print(f"Incoming update request for user ID {user_id}")
             data = json.loads(request.body)
+            print(f"Request body parsed: {data}")
 
-            username = data.get('username')
-            first_name = data.get('first_name')
-            last_name = data.get('last_name')
-            is_active = data.get('is_active', True)  # Default to True if not provided
+            user = User.objects.get(id=user_id)
+            current_is_active = user.is_active  # capture current state
 
-            if username:
-                user.username = username
-            if first_name:
-                user.first_name = first_name
-            if last_name:
-                user.last_name = last_name
-            user.is_active = is_active
+            # Always allow is_active to be updated
+            if 'is_active' in data:
+                user.is_active = str_to_bool(data['is_active'])
+
+            # Only allow full update if user is currently active
+            if current_is_active:
+                user.username = data.get('username', user.username)
+                user.first_name = data.get('first_name', user.first_name)
+                user.last_name = data.get('last_name', user.last_name)
+                user.is_staff = str_to_bool(data.get('is_staff', False))
+
+                print("User object fields (except is_active) updated.")
+
+                # Update profile
+                profile, _ = UserProfile.objects.get_or_create(user=user)
+
+                weight = data.get('weight')
+                if weight is not None:
+                    try:
+                        profile.weight = float(weight)
+                    except ValueError:
+                        return JsonResponse({"error": "Invalid weight format"}, status=400)
+
+                bdate_str = data.get('bDate')
+                if bdate_str:
+                    try:
+                        profile.bDate = datetime.fromisoformat(bdate_str).date()
+                    except ValueError:
+                        return JsonResponse({"error": "Invalid date format for bDate"}, status=400)
+
+                profile.health_condition = data.get('health_condition', profile.health_condition)
+                profile.save()
+
+                print("Profile object updated.")
+            else:
+                print("User is inactive — skipping update of other fields.")
 
             user.save()
 
-            updated_user_data = {
+            return JsonResponse({
                 'id': user.id,
                 'username': user.username,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
                 'is_active': user.is_active,
-            }
-            return JsonResponse(updated_user_data, status=200)
+                'userprofile': {
+                    'weight': getattr(user.userprofile, 'weight', None),
+                    'bDate': getattr(user.userprofile, 'bDate', None),
+                    'health_condition': getattr(user.userprofile, 'health_condition', None),
+                }
+            }, status=200)
 
-        except User.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON format"}, status=400)
         except Exception as e:
+            print(f"Exception occurred: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Method Not Allowed"}, status=405)
+
+    return JsonResponse({"error": "Method Not Allowed"}, status=405)
     
 @csrf_exempt
 def update_user(request, user_id):
