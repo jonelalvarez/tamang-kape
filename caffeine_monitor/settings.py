@@ -26,9 +26,9 @@ SECRET_KEY = 'django-insecure-(yxhfwe45#uj&%bpz5*o-6ibgo$pxmd7*b(&9#^+5!m5)xgg+%
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "127.0.0.1",  # ✅ Localhost for browser requests
-    "10.0.2.2",    # ✅ Android Emulator requests
-    "localhost",   # ✅ Sometimes needed
+    "127.0.0.1",
+    "10.0.2.2",
+    "localhost",
     "tamang-kape-01.onrender.com"
 ]
 
