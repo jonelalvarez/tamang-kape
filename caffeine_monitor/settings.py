@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -93,16 +95,18 @@ WSGI_APPLICATION = 'caffeine_monitor.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'tamangkape',
-        'USER': 'root',
-        'PASSWORD': 'acedonut88',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'railway'),  # Default to 'railway' if not set
+        'USER': os.environ.get('DB_USER', 'root'),  # Default to 'root' if not set
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'hiINxMBTnKlBogPhOJlqyfDtJgtyJTOT'),  # Default password if not set
+        'HOST': os.environ.get('DB_HOST', 'switchback.proxy.rlwy.net'),
+        'PORT': os.environ.get('DB_PORT', '17884'),
     }
 }
+
 
 
 # SOCIALACCOUNT_PROVIDERS = {
